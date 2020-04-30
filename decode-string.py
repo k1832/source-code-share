@@ -6,10 +6,13 @@ def getRepeatedString(repeat_count, string):
   return string
 
 def decodeString(s):
+  # 最初の"["の位置を取得
   first_opening_bracket_index = s.find('[')
   if first_opening_bracket_index < 0:
     return s
   first_num_index = re.search(r'\d', s).start()
+  
+  # 最初の繰り返し数と、それより左の文字列を取得
   repeat_count = int(s[first_num_index : first_opening_bracket_index])
   left_string = s[:first_num_index]
 
