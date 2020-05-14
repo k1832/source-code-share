@@ -14,6 +14,7 @@ def dfs(string):
     have_seen[sub_string] = False
   return False
 def main():
+  string = str(input())
   dfs(string)
   element_list.reverse()
   print(element_list)
