@@ -20,8 +20,7 @@ int main() {
   dfs(n-1, n-1, 1);
   for(int i = 0; i < n; ++i) {
     for(int j = 0; j < n; ++j) {
-      if(board[i][j] < 10) cout << board[i][j] << "  ";
-      else cout << board[i][j] << " ";
+      printf("%2d ", board[i][j]);
     }
     cout << "\n";
   }
