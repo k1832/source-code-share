@@ -1,8 +1,4 @@
-import random
-board = [[0] * 10 for i in range(10)]
-dy = [2,1,-1,-2,-2,-1,1,2]
-dx = [1,2,2,1,-1,-2,-2,-1]
-n = 0
+from tabulate import tabulate
 def dfs(y, x, current):
   if current == n**2: return True
   for i in range(8):
@@ -14,14 +10,10 @@ def dfs(y, x, current):
     if dfs(next_y, next_x, current+1): return True
     board[next_y][next_x] = 0
   return False
-def main():
-  global n
-  n = int(input())
-  board[n-1][n-1] = 1
-  dfs(n-1,n-1,1)
-  for i in range(n):
-    for j in range(n):
-      print("%2d" % board[i][j], end=" ")
-    print()
-if __name__ == "__main__":
-  main()
+n = int(input())
+board = [[0] * n for i in range(n)]
+dy = [2,1,-1,-2,-2,-1,1,2]
+dx = [1,2,2,1,-1,-2,-2,-1]
+board[n-1][n-1] = 1
+dfs(n-1,n-1,1)
+print(tabulate(board,tablefmt="grid"))
