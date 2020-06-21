@@ -24,27 +24,29 @@ def init_dictionary(current_dir):
     else:
       init_dictionary(os.path.join(current_dir, name))
 
-def dfs(sc, current=0):
+def dfs(sc, shiritori=[]):
   # if check(sc):
   #   return shiritori
   if word_counter[sc] == 0:
-    return current
-  minimun = 0
+    return shiritori
+  shortest = []
   for i in range(min(len(words[sc]), 2)):
     if words[sc][i].have_seen:
       continue
     words[sc][i].have_seen = True
     word_counter[sc] -= 1
-    tmp = dfs(words[sc][i].word[-1].lower(), current+1)
+    tmp = copy.copy(shiritori)
+    tmp.append(words[sc][i].word)
+    tmp = dfs(words[sc][i].word[-1].lower(), tmp)
     words[sc][i].have_seen = False
     word_counter[sc] += 1
-    if not minimun:
-      minimun = tmp
-    elif tmp < minimun:
-      minimun = tmp
-  if minimun == 0:
-    return 10**10
-  return minimun
+    if len(tmp) == 0:
+      continue
+    if len(shortest) == 0 or len(shortest) > len(tmp):
+      shortest = tmp
+  if len(shortest) == 0:
+    return []
+  return shortest
 
 # その文字から始まる文字列を全部使った時
 def check(sc):
@@ -54,13 +56,10 @@ def check(sc):
   return True
 
 def solve(c):
+  array = dfs(c)
   global counter
-  # array = dfs(c)
-  # counter += len(array)
-  # print("{}: {}".format(c, array))
-  tmp = dfs(c)
-  counter += tmp
-  print("{}: {}".format(c, tmp))
+  counter += len(array)
+  print("{}: {}".format(c, array))
   for first_letter in words:
     for word in words[first_letter]:
       word.have_seen = False
