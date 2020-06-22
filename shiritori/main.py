@@ -1,45 +1,59 @@
 # -*- coding: utf-8 -*-
 import os, copy, string
-from collections import defaultdict
-
 base = os.path.join(os.getcwd(), "files")
-words = {}
 
-counter = 0
-word_counter = {}
+# alphabets = {"a":{"words": [WordCard], "num_available": len(alphabets["a"]["words"])}}
+alphabets = {}
 
-class Word():
-  def __init__(self, word, have_seen, occur = 0):
+class WordCard():
+  def __init__(self, word, have_seen, score=0):
     self.word = word
     self.have_seen = False
-    self.occur = occur
+    self.score = score
 
 def init_dictionary(current_dir):
   for name in os.listdir(current_dir):
     if os.path.isfile(os.path.join(current_dir, name)):
       first_letter = name[0].lower()
-      if not first_letter in words:
-        words[first_letter] = []
-      words[first_letter].append(Word(name, False))
+      if not first_letter in alphabets:
+        alphabets[first_letter] = {}
+      if not "words" in alphabets[first_letter]:
+        alphabets[first_letter]["words"] = []
+      alphabets[first_letter]["words"].append(WordCard(name, False))
     else:
       init_dictionary(os.path.join(current_dir, name))
 
+def update_score():
+  for key in alphabets:
+    alphabets[key]["num_available"] = len(alphabets[key]["words"])
+    for word in alphabets[key]["words"]:
+      last_letter = word.word[-1].lower()
+      word.score = len(alphabets[last_letter]["words"])
+  for key in alphabets:
+    alphabets[key]["words"].sort(key=lambda word: word.score)
+  
+  for key in alphabets:
+    for word in alphabets[key]["words"]:
+      last_letter = word.word[-1].lower()
+      next_best_score = alphabets[last_letter]["words"][0].score
+      word.score = min([word.score, next_best_score+1])
+  for key in alphabets:
+    alphabets[key]["words"].sort(key=lambda word: word.score)
+
 def dfs(sc, shiritori=[]):
-  # if check(sc):
-  #   return shiritori
-  if word_counter[sc] == 0:
+  if alphabets[sc]["num_available"] <= 0:
     return shiritori
   shortest = []
-  for i in range(min(len(words[sc]), 2)):
-    if words[sc][i].have_seen:
+  for i in range(min(len(alphabets[sc]["words"]), 2)):
+    if alphabets[sc]["words"][i].have_seen:
       continue
-    words[sc][i].have_seen = True
-    word_counter[sc] -= 1
+    alphabets[sc]["words"][i].have_seen = True
+    alphabets[sc]["num_available"] -= 1
     tmp = copy.copy(shiritori)
-    tmp.append(words[sc][i].word)
-    tmp = dfs(words[sc][i].word[-1].lower(), tmp)
-    words[sc][i].have_seen = False
-    word_counter[sc] += 1
+    tmp.append(alphabets[sc]["words"][i].word)
+    tmp = dfs(alphabets[sc]["words"][i].word[-1].lower(), tmp)
+    alphabets[sc]["words"][i].have_seen = False
+    alphabets[sc]["num_available"] += 1
     if len(tmp) == 0:
       continue
     if len(shortest) == 0 or len(shortest) > len(tmp):
@@ -48,42 +62,21 @@ def dfs(sc, shiritori=[]):
     return []
   return shortest
 
-# その文字から始まる文字列を全部使った時
-def check(sc):
-  for word in words[sc]:
-    if not word.have_seen:
-      return False
-  return True
-
 def solve(c):
   array = dfs(c)
-  global counter
-  counter += len(array)
-  print("{}: {}".format(c, array))
-  for first_letter in words:
-    for word in words[first_letter]:
+  for key in alphabets:
+    for word in alphabets[key]["words"]:
       word.have_seen = False
+  return array
 
 def main():
   init_dictionary(base)
-  for first_letter in words:
-    for word in words[first_letter]:
-      last_letter = word.word[-1].lower()
-      word.occur = len(words[last_letter])
-  for first_letter in words:
-    words[first_letter].sort(key=lambda word: word.occur)
-  for first_letter in words:
-    for word in words[first_letter]:
-      last_letter = word.word[-1].lower()
-      next_best = words[last_letter][0].occur
-      word.occur = min([len(words[last_letter]), next_best+1])
-  for first_letter in words:
-    words[first_letter].sort(key=lambda word: word.occur)
-    word_counter[first_letter] = len(words[first_letter])
-  
-  
+  update_score()
+  counter = 0
   for i in range(ord('a'), ord('z')+1):
-    solve(chr(i))
+    ans = solve(chr(i))
+    print("{}: {}".format(chr(i), ans))
+    counter += len(ans)
   print("counter: {}".format(counter))
 
 if __name__ == "__main__":
