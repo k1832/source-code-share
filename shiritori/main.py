@@ -1,80 +1,90 @@
 # -*- coding: utf-8 -*-
 import os, copy, string
+import queue
 base = os.path.join(os.getcwd(), "files")
 
-# alphabets = {"a":{"words": [WordCard], "num_available": len(alphabets["a"]["words"])}}
-alphabets = {}
+MAX_NUM_TO_SEARCH = 2
 
-class WordCard():
-  def __init__(self, word, have_seen, score=0):
+# words_beginning_with = {"a":[WordWithScore], "b": [WordWithScore], ..., "z": [WordWithScore]}
+words_beginning_with = {}
+
+class WordWithScore():
+  def __init__(self, word, score=0):
     self.word = word
-    self.have_seen = False
     self.score = score
 
-def init_dictionary(current_dir):
+def map_dir(current_dir):
   for name in os.listdir(current_dir):
     if os.path.isfile(os.path.join(current_dir, name)):
       first_letter = name[0].lower()
-      if not first_letter in alphabets:
-        alphabets[first_letter] = {}
-      if not "words" in alphabets[first_letter]:
-        alphabets[first_letter]["words"] = []
-      alphabets[first_letter]["words"].append(WordCard(name, False))
+      if not first_letter in words_beginning_with:
+        words_beginning_with[first_letter] = []
+      words_beginning_with[first_letter].append(WordWithScore(name))
     else:
-      init_dictionary(os.path.join(current_dir, name))
+      map_dir(os.path.join(current_dir, name))
 
 def update_score():
-  for key in alphabets:
-    alphabets[key]["num_available"] = len(alphabets[key]["words"])
-    for word in alphabets[key]["words"]:
+  # 最後の文字で始まる単語数をscoreとして持つ
+  # 例："abd"について、"d"から始まる単語数が"abd"のscoreになる
+  for first_letter in words_beginning_with:
+    for word in words_beginning_with[first_letter]:
       last_letter = word.word[-1].lower()
-      word.score = len(alphabets[last_letter]["words"])
-  for key in alphabets:
-    alphabets[key]["words"].sort(key=lambda word: word.score)
+      word.score = len(words_beginning_with[last_letter])
+  # 最初の文字ごとにscoreでソート
+  for first_letter in words_beginning_with:
+    words_beginning_with[first_letter].sort(key=lambda word: word.score)
   
-  for key in alphabets:
-    for word in alphabets[key]["words"]:
+  # 最後の文字で始まる単語のなかで最もスコアのいいものと自分のスコアを比較
+  # 例："abd"について、「"abd"のスコア」と、「"d"で始まる単語の中で最もスコアのいいもの+1」を比較して良い方をscoreとして更新
+  for first_letter in words_beginning_with:
+    for word in words_beginning_with[first_letter]:
       last_letter = word.word[-1].lower()
-      next_best_score = alphabets[last_letter]["words"][0].score
+      next_best_score = words_beginning_with[last_letter][0].score
       word.score = min([word.score, next_best_score+1])
-  for key in alphabets:
-    alphabets[key]["words"].sort(key=lambda word: word.score)
 
-def dfs(sc, shiritori=[]):
-  if alphabets[sc]["num_available"] <= 0:
-    return shiritori
-  shortest = []
-  for i in range(min(len(alphabets[sc]["words"]), 2)):
-    if alphabets[sc]["words"][i].have_seen:
-      continue
-    alphabets[sc]["words"][i].have_seen = True
-    alphabets[sc]["num_available"] -= 1
-    tmp = copy.copy(shiritori)
-    tmp.append(alphabets[sc]["words"][i].word)
-    tmp = dfs(alphabets[sc]["words"][i].word[-1].lower(), tmp)
-    alphabets[sc]["words"][i].have_seen = False
-    alphabets[sc]["num_available"] += 1
-    if len(tmp) == 0:
-      continue
-    if len(shortest) == 0 or len(shortest) > len(tmp):
-      shortest = tmp
-  if len(shortest) == 0:
-    return []
-  return shortest
+  # 同じ文字で終わる単語が複数ある場合は、一つに絞る
+  for first_letter in words_beginning_with:
+    for i in range(len(words_beginning_with[first_letter])-1):
+      if words_beginning_with[first_letter][i].word[-1] == words_beginning_with[first_letter][i+1].word[-1]:
+        words_beginning_with[first_letter][i+1].score = 100
+  
+  # 最終的なスコアでソート
+  for first_letter in words_beginning_with:
+    words_beginning_with[first_letter].sort(key=lambda word: word.score)
 
-def solve(c):
-  array = dfs(c)
-  for key in alphabets:
-    for word in alphabets[key]["words"]:
-      word.have_seen = False
-  return array
+def bfs(first_letter):
+  q = queue.Queue()
+  for word in words_beginning_with[first_letter]:
+    q.put([word.word])
+  while not q.empty():
+    shiritori = q.get()
+    nothing_found = True
+    last_word = shiritori[-1]
+    last_letter = last_word[-1].lower()  # shiritoriで最後に追加されたものの最後の文字の小文字
+
+    # スコアによってソートされたものを、上から最大{MAX_NUM_TO_SEARCH}個試す
+    for i in range(min(len(words_beginning_with[last_letter]),MAX_NUM_TO_SEARCH+1)):
+      if words_beginning_with[last_letter][i].word in shiritori:
+        continue
+      nothing_found = False
+      tmp = copy.copy(shiritori)
+      tmp.append(words_beginning_with[last_letter][i].word)
+      q.put(tmp)
+    if nothing_found:
+      # 本当に次に続く単語がないか探索
+      # ある場合は空の配列を返す
+      for word in words_beginning_with[last_letter]:
+        if not word.word in shiritori:
+          return []
+      return shiritori
+  return []
 
 def main():
-  init_dictionary(base)
+  map_dir(base)
   update_score()
   counter = 0
   for i in range(ord('a'), ord('z')+1):
-    ans = solve(chr(i))
+    ans = bfs(chr(i))
     print("{}: {}".format(chr(i), ans))
     counter += len(ans)
   print("counter: {}".format(counter))

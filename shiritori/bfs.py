@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os, copy, string
+import queue
 base = os.path.join(os.getcwd(), "files")
 
 # alphabets = {"a":{"words": [WordCard], "num_available": len(alphabets["a"]["words"])}}
@@ -46,30 +47,27 @@ def update_score():
   for key in alphabets:
     alphabets[key]["words"].sort(key=lambda word: word.score)
 
-def dfs(sc, shiritori=[]):
-  if alphabets[sc]["num_available"] <= 0:
-    return shiritori
-  shortest = []
-  for i in range(min(len(alphabets[sc]["words"]), 2)):
-    if alphabets[sc]["words"][i].have_seen:
-      continue
-    alphabets[sc]["words"][i].have_seen = True
-    alphabets[sc]["num_available"] -= 1
-    tmp = copy.copy(shiritori)
-    tmp.append(alphabets[sc]["words"][i].word)
-    tmp = dfs(alphabets[sc]["words"][i].word[-1].lower(), tmp)
-    alphabets[sc]["words"][i].have_seen = False
-    alphabets[sc]["num_available"] += 1
-    if len(tmp) == 0:
-      continue
-    if len(shortest) == 0 or len(shortest) > len(tmp):
-      shortest = tmp
-  if len(shortest) == 0:
-    return []
-  return shortest
+def bfs(sc):
+  q = queue.Queue()
+  for word in alphabets[sc]["words"]:
+    q.put([word.word])
+  while not q.empty():
+    shiritori = q.get()
+    found_nothing = True
+    lc = shiritori[-1][-1].lower()  # shiritoriで最後に追加されたものの最後の文字の小文字
+    for i in range(min(len(alphabets[lc]["words"]),2)):
+      if alphabets[lc]["words"][i].word in shiritori:
+        continue
+      found_nothing = False
+      tmp = copy.copy(shiritori)
+      tmp.append(alphabets[lc]["words"][i].word)
+      q.put(tmp)
+    if found_nothing:
+      return shiritori
+  return []
 
 def solve(c):
-  array = dfs(c)
+  array = bfs(c)
   for key in alphabets:
     for word in alphabets[key]["words"]:
       word.have_seen = False
